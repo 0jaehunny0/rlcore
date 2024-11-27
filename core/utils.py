@@ -6,6 +6,8 @@ import random
 import time
 from typing import Optional
 
+import re
+
 target_fps=30
 target_temp=65
 beta=2
@@ -30,17 +32,33 @@ mid_max_freq = 2253000
 big_max_freq = 2802000 
 gpu_max_freq = 848000
 
-def get_states2(window, qos_type: str, qos_time_prev: float, byte_prev: Optional[int], packet_prev: Optional[int]):
+def init_get_state(window):
     """ temps """
     msg = 'adb shell "'
     msg += ' cat /dev/thermal/tz-by-name/BIG/temp /dev/thermal/tz-by-name/MID/temp /dev/thermal/tz-by-name/LITTLE/temp /dev/thermal/tz-by-name/G3D/temp /dev/thermal/tz-by-name/qi_therm/temp /dev/thermal/tz-by-name/battery/temp'
     msg += ' && cat /dev/thermal/cdev-by-name/thermal-cpufreq-0/cur_state /dev/thermal/cdev-by-name/thermal-cpufreq-1/cur_state /dev/thermal/cdev-by-name/thermal-cpufreq-2/cur_state /dev/thermal/cdev-by-name/thermal-gpufreq-0/cur_state'
     msg += ' && cat /sys/bus/iio/devices/iio:device0/energy_value'
     msg += ' && cat /sys/bus/iio/devices/iio:device1/energy_value'
-    msg += '&& cat /proc/stat'
     msg += '&& cat /sys/devices/platform/1c500000.mali/utilization'
     msg += '&& cat /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq /sys/devices/system/cpu/cpufreq/policy4/scaling_cur_freq /sys/devices/system/cpu/cpufreq/policy6/scaling_cur_freq /sys/class/misc/mali0/device/cur_freq'
     msg += '&& dumpsys SurfaceFlinger --latency ' + '\'' + window + '\''
+    msg += '&& cat /proc/stat'
+    msg += '"'
+
+    result = subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    result = result.decode('utf-8')
+
+def get_states2(window):
+    """ temps """
+    msg = 'adb shell "'
+    msg += ' cat /dev/thermal/tz-by-name/BIG/temp /dev/thermal/tz-by-name/MID/temp /dev/thermal/tz-by-name/LITTLE/temp /dev/thermal/tz-by-name/G3D/temp /dev/thermal/tz-by-name/qi_therm/temp /dev/thermal/tz-by-name/battery/temp'
+    msg += ' && cat /dev/thermal/cdev-by-name/thermal-cpufreq-0/cur_state /dev/thermal/cdev-by-name/thermal-cpufreq-1/cur_state /dev/thermal/cdev-by-name/thermal-cpufreq-2/cur_state /dev/thermal/cdev-by-name/thermal-gpufreq-0/cur_state'
+    msg += ' && cat /sys/bus/iio/devices/iio:device0/energy_value'
+    msg += ' && cat /sys/bus/iio/devices/iio:device1/energy_value'
+    msg += '&& cat /sys/devices/platform/1c500000.mali/utilization'
+    msg += '&& cat /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq /sys/devices/system/cpu/cpufreq/policy4/scaling_cur_freq /sys/devices/system/cpu/cpufreq/policy6/scaling_cur_freq /sys/class/misc/mali0/device/cur_freq'
+    msg += '&& dumpsys SurfaceFlinger --latency ' + '\'' + window + '\''
+    msg += '&& cat /proc/stat'
     msg += '"'
 
     result = subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
@@ -67,42 +85,45 @@ def get_states2(window, qos_type: str, qos_time_prev: float, byte_prev: Optional
     t2 = int(result[19][2:])
     gpu_e = int(result[26].split()[1])
 
-    li = []
-    for i in result[29:37]:
-        temp = np.array(i.split()[1:], dtype=np.int32)
-        li.append([temp[0:7].sum(), temp[3]])
+    gpu_util = [int(result[28])/100]
 
-    gpu_util = [int(result[44])/100]
 
-    little = int(result[45])
-    mid = int(result[46])
-    big = int(result[47])
-    gpu = int(result[48])
+    little = int(result[29])
+    mid = int(result[30])
+    big = int(result[31])
+    gpu = int(result[32])
 
     freqs = np.array([little, mid, big, gpu])
 
     byte_cur = None
     packet_cur = None
     qos_time_cur = None
-    match qos_type:
-        case "fps":              
-            startTime = int(result[-33].split("\t")[0])
-            lastTime = int(result[-3].split("\t")[-1])  
-            twentyFrameTime = (lastTime - startTime) / 1000000000
-            qos = 30 / twentyFrameTime
-        case "byte":
-            byte_cur = get_packet_info(window, qos_type)
-            qos_time_cur = time.time()
-            qos = cal_packet((byte_prev, byte_cur), (qos_time_prev, qos_time_cur))
-            print(byte_cur[1] - byte_prev[1], byte_cur[0] - byte_prev[0], qos_time_cur - qos_time_prev, qos)
-        case "packet":
-            packet_cur = get_packet_info(window, qos_type)
-            qos_time_cur = time.time()
-            qos = cal_packet((packet_prev, packet_cur), (qos_time_prev, qos_time_cur))
+    startTime = int(result[34].split("\t")[0])
+    lastTime = int(result[64].split("\t")[-1])  
+    twentyFrameTime = (lastTime - startTime) / 1000000000
+    qos = 30 / twentyFrameTime
+
+    cpu0, cpu1, cpu2, cpu3, cpu4, cpu5, cpu6, cpu7 = [t2, t2], [t2, t2], [t2, t2], [t2, t2], [t2, t2], [t2, t2], [t2, t2], [t2, t2]
+    for i in result[163:]:
+        if "intr" in i: 
+            break
+
+        # pattern = re.compile(r'\b(cpu[0-7])\b')
+        # if pattern.search(i):
+        #     print(i)
+        splitted = i.split()
+        var = splitted[0]
+        temp = np.array(splitted[1:], dtype=np.int32)
+        locals()[var][0], locals()[var][1] = temp[0:7].sum(), temp[3]
+        var = splitted[0]
+
+    li = np.array([cpu0, cpu1, cpu2, cpu3, cpu4, cpu5, cpu6, cpu7])
 
     c_states = [little_cdev, mid_cdev, big_cdev, gpu_cdev]
 
     temps = [little_temp/1000, mid_temp/1000, big_temp/1000, gpu_temp/1000, qi_temp/1000, battery_temp/1000]
+
+
 
 
     return c_states, temps, qos, t1, t2, little_e, mid_e, big_e, gpu_e, np.array(li), gpu_util, freqs, qos_time_cur, byte_cur, packet_cur
@@ -583,3 +604,72 @@ def wait_temp(temp):
             break
 
     print("[completed] temp set :", temp)
+
+
+
+def disable_cores(cpu0, cpu1, cpu2, cpu3, cpu4, cpu5, cpu6, cpu7):
+    # ARM cannot disable cpu0
+    """ little """
+    if cpu1 == 0:
+        msg = 'adb shell "echo '+str(cpu1)+' > /sys/devices/system/cpu/cpu1/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    if cpu2 == 0:
+        msg = 'adb shell "echo '+str(cpu2)+' > /sys/devices/system/cpu/cpu2/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    if cpu3 == 0:
+        msg = 'adb shell "echo '+str(cpu3)+' > /sys/devices/system/cpu/cpu3/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    """ mid """
+    if cpu4 == 0:
+        msg = 'adb shell "echo '+str(cpu4)+' > /sys/devices/system/cpu/cpu4/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    if cpu5 == 0:    
+        msg = 'adb shell "echo '+str(cpu5)+' > /sys/devices/system/cpu/cpu5/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    """ big """
+    if cpu6 == 0:    
+        msg = 'adb shell "echo '+str(cpu6)+' > /sys/devices/system/cpu/cpu6/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    if cpu7 == 0:
+        msg = 'adb shell "echo '+str(cpu7)+' > /sys/devices/system/cpu/cpu7/online"'
+        subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+
+
+def set_cores(cpu0, cpu1, cpu2, cpu3, cpu4, cpu5, cpu6, cpu7):
+    # ARM cannot disable cpu0
+    """ little """
+    msg = 'adb shell "echo '+str(cpu1)+' > /sys/devices/system/cpu/cpu1/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo '+str(cpu2)+' > /sys/devices/system/cpu/cpu2/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo '+str(cpu3)+' > /sys/devices/system/cpu/cpu3/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    """ mid """
+    msg = 'adb shell "echo '+str(cpu4)+' > /sys/devices/system/cpu/cpu4/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo '+str(cpu5)+' > /sys/devices/system/cpu/cpu5/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    """ big """
+    msg = 'adb shell "echo '+str(cpu6)+' > /sys/devices/system/cpu/cpu6/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo '+str(cpu7)+' > /sys/devices/system/cpu/cpu7/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+
+def unset_cores():
+    """ little """
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu1/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu2/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu3/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    """ mid """
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu4/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu5/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    """ big """
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu6/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
+    msg = 'adb shell "echo 1 > /sys/devices/system/cpu/cpu7/online"'
+    subprocess.Popen(msg, shell=True, stdout=subprocess.PIPE).stdout.read()
