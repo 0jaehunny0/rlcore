@@ -25,6 +25,7 @@ tenacity = "^8.2.2"
 tyro = "^0.5.10"
 pyyaml = "^6.0.1"
 
+
 ale-py = {version = "0.8.1", optional = true}
 AutoROM = {extras = ["accept-rom-license"], version = "~0.4.2", optional = true}
 opencv-python = {version = "^4.6.0.66", optional = true}
@@ -52,6 +53,13 @@ h5py = {version = ">=3.7.0", optional = true}
 optax = {version = "0.1.4", optional = true}
 chex = {version = "0.1.5", optional = true}
 numpy = ">=1.21.6"
+
+
+psutil = "*"
+scikit-learn = "*"
+matplotlib = "*"
+protobuf = "3.20.*"
+seaborn = "*"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"
