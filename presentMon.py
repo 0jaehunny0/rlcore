@@ -82,4 +82,4 @@ if __name__ == "__main__":
     print(args)
 
     # qos_type = args.qos
-    monitor_fps(22740)
+    monitor_fps(20364)

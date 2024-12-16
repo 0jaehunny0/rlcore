@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # 모든 코어 쌍 (i, j) i != j
     core_pairs = [(i, j) for i in range(cpu_count) for j in range(cpu_count) if i != j]
 
-    iterations = 500
+    iterations = 1000
 
     # NxN 매트릭스 만들기. i->j 평균 레이턴시 저장
     # 초기값은 None (측정 안된 경우)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     # heatmap 그리기
     plt.figure(figsize=(10, 8))
-    sns.heatmap(latency_matrix, annot=True, fmt=".2f", cmap='coolwarm', 
+    sns.heatmap(latency_matrix, annot=True, fmt=".0f", cmap='coolwarm', 
                 xticklabels=[f"Core {i}" for i in range(cpu_count)],
                 yticklabels=[f"Core {i}" for i in range(cpu_count)],
                 cbar_kws={'label': 'Latency (µs)'},
