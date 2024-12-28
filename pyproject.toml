@@ -3,8 +3,7 @@ name = "rl-core"
 version = "0.0.0"
 description = "Managing cpu core activation with RL"
 authors = ["Costa Huang <costa.huang@outlook.com>"]
-packages = [
-]
+package-mode = false
 keywords = ["reinforcement", "machine", "learning", "research"]
 license="MIT"
 readme = "README.md"
@@ -60,6 +59,8 @@ scikit-learn = "*"
 matplotlib = "*"
 protobuf = "3.20.*"
 seaborn = "*"
+
+pywin32 = { version = "*", markers = "sys_platform == 'win32'"}
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"
