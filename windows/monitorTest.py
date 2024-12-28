@@ -66,8 +66,53 @@ else:
 
 get_cpu_affinity(pid)
 
-cpu_list = [0,2,4,6,8,10,12,14]
-cpu_list = list(np.array(np.arange(0,16)).tolist())
-cpu_list = list(np.array(np.arange(0,32)).tolist())
-cpu_list = list(np.array(np.arange(16,32)).tolist())
+"""
+0 1 
+2 3 4 5
+6 7 8 9
+10 11
+12 13 
+14 15 16 17
+18 19 20 21
+22 23
+"""
+
+# cpu_list = [0,2,4,6,8,10,12,14]
+# cpu_list = list(np.array(np.arange(0,16)).tolist())
+# cpu_list = list(np.array(np.arange(0,32)).tolist())
+# cpu_list = list(np.array(np.arange(16,32)).tolist())
+
+
+cpu_list = [0,2,3,4,5,10,12,14,15,16,17,22] # left
+cpu_list = list(np.array(np.arange(10,24)).tolist())
+
+cpu_list = [0,1,2,3,4,5,6,7,8,9,14,15,16,17,18,19,20,21]
+
+cpu_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23] # full
+
+
+cpu_list = list(np.array(np.arange(10,24)).tolist())
+cpu_list = list(np.array(np.arange(0,24)).tolist())
+cpu_list = list(np.array(np.arange(0,24)).tolist())
+cpu_list = [0, 2,3,4,5, 6,7,8,9, 14,15,16,17,18,19, 20,21] # 1P 16E
+
+cpu_list = list(np.array(np.arange(10,24)).tolist())
+
+
+cpu_list = [0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] # 6P + 8E
+
+
+cpu_list = [0, 1, 10, 11, 12, 22, 23] # full
+
+
+cpu_list = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] # cut 4 p cores
+
+cpu_list = [0, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 17, 18, 19, 20, 21] # 1p 16e
+
+
+cpu_list = [2, 3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 17, 18, 19, 20, 21] # only e -core
+
+cpu_list = [0, 1, 2, 3, 4, 5, 10, 11, 12, 13,  22, 23] # 8p + 4e
+
+
 set_cpu_affinity(pid, cpu_list)
